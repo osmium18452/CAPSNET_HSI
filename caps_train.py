@@ -15,8 +15,29 @@ import os
 import scipy.io
 # from cnn_model import conv_net
 import time
-from caps_model import CapsNet
+from caps_model import CapsNet, CapsNet_2, CapsNet_3
 import argparse
+
+parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
+parser.add_argument("-e", "--epochs", default=10, type=int,
+					help="The number of epochs you want to train.")
+parser.add_argument("-g", "--gpu", default="0", type=str,
+					help="Which gpu(s) you want to use.")
+parser.add_argument("-i", "--iteration", default=50000, type=int,
+					help="Iterations for training.")
+parser.add_argument("-d", "--directory", default="./saved_model",
+					help="none.")
+parser.add_argument("-b", "--batch", default=100,type=int,
+					help="none.")
+parser.add_argument("-m", "--model", default=2,type=int,
+					help="none.")
+parser.add_argument("-r","--restore",default=False,
+					help="none.")
+args = parser.parse_args()
+
+print(args)
+
+os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 
 def compute_prob_map():
@@ -61,8 +82,8 @@ Test_data['test_patch'] = np.reshape(Test_data['test_patch'], (-1, n_input))
 
 # Parameters
 learning_rate = 0.001
-training_iters = 100000
-batch_size = 10
+training_iters = args.iteration
+batch_size = args.batch
 display_step = 500
 n_classes = 16
 
@@ -71,14 +92,20 @@ n_classes = 16
 # y = tf.placeholder("float", [None, n_classes])
 
 x = tf.placeholder(shape=[None, n_input], dtype=tf.float32, name="X")
-y = tf.placeholder(shape=[None,n_classes], dtype=tf.int64, name="y")
+y = tf.placeholder(shape=[None, n_classes], dtype=tf.int64, name="y")
 
 # construct model.
-capsOutput = CapsNet(x)
-
+# capsOutput = CapsNet_2(x)
+if args.model == 1:
+	capsOutput = CapsNet(x)
+else:
+	if args.model ==2 :
+		capsOutput = CapsNet_2(x)
+	else:
+		capsOutput = CapsNet_3(x)
 # Calculate the probability.
 y_prob = safe_norm(capsOutput, axis=-2, name="y_prob")
-pred=y_prob
+pred = tf.squeeze(y_prob)
 softmax_output = tf.nn.softmax(tf.squeeze(y_prob))
 # Choose the predicted one.
 y_prob_argmax = tf.argmax(y_prob, axis=2, name="y_predicted_argmax")
@@ -97,10 +124,10 @@ lambda_ = 0.5
 
 # TODO: These two pramaters can be changed to fit into new datasets.
 
-yy=y
-y=tf.argmax(y,axis=-1)
+yy = y
+y = tf.argmax(y, axis=-1)
 T = tf.one_hot(y, depth=Labels, name="T")
-y=yy
+y = yy
 # T=y
 capsOutput_norm = safe_norm(capsOutput, axis=-2, keep_dims=True, name="capsule_output_norm")
 
@@ -111,7 +138,7 @@ absent_error = tf.reshape(absent_error_raw, shape=(-1, n_classes), name="absent_
 
 L = tf.add(T * present_error, lambda_ * (1.0 - T) * absent_error, name="L")
 margin_loss = tf.reduce_mean(tf.reduce_sum(L, axis=1), name="margin_loss")
-cost=margin_loss
+cost = margin_loss
 
 '''
 # Construct model
@@ -138,6 +165,10 @@ x_test, y_test = Test_data['test_patch'], Test_data['test_labels']
 y_test_scalar = np.argmax(y_test, 1) + 1
 x_train, y_train = Training_data['train_patch'], Training_data['train_labels']
 
+if not os.path.exists(args.directory):
+	os.makedirs(args.directory)
+save_path = os.path.join(args.directory, "saved_model.ckpt")
+
 with tf.Session() as sess:
 	sess.run(init)
 	idx = np.random.choice(num_train, size=batch_size, replace=False)
@@ -146,13 +177,17 @@ with tf.Session() as sess:
 	batch_y = Training_data['train_labels'][idx, :]
 	print()
 	print("============")
-	print(sess.run(y_prob,feed_dict={x:batch_x,y:batch_y}).shape)
+	print(sess.run(y_prob, feed_dict={x: batch_x, y: batch_y}).shape)
 	print("===========")
 	print()
 
 # Launch the graph
+saver = tf.train.Saver()
 with tf.Session() as sess:
-	sess.run(init)
+	if args.restore and os.path.exists(save_path):
+		saver.restore(sess,save_path)
+	else:
+		sess.run(init)
 	# Training cycle
 	for iteration in range(training_iters):
 		idx = np.random.choice(num_train, size=batch_size, replace=False)
@@ -167,12 +202,16 @@ with tf.Session() as sess:
 			print("Iteraion", '%04d,' % (iteration), \
 				  "Batch cost=%.4f," % (batch_cost), \
 				  "Training Accuracy=%.4f" % (train_acc))
-		
-		if iteration % 1000 == 10000:
-			print('Training Data Eval: Training Accuracy = %.4f' % sess.run(accuracy, \
-																			feed_dict={x: x_train, y: y_train}))
+		if iteration % 1000 == 999:
+			saver.save(sess, save_path)
+			print("model saved.")
+		if iteration % 1000 == 0:
+			idx = np.random.choice(num_train, size=batch_size, replace=False)
+			# Use the random index to select random images and labels.
+			test_batch_x = Training_data['train_patch'][idx, :]
+			test_batch_y = Training_data['train_labels'][idx, :]
 			print('Test Data Eval: Test Accuracy = %.4f' % sess.run(accuracy, \
-																	feed_dict={x: x_test, y: y_test}))
+																	feed_dict={x: test_batch_x, y: test_batch_y}))
 	print("Optimization Finished!")
 	
 	# Test model
@@ -198,7 +237,7 @@ with tf.Session() as sess:
 	prob_map = np.delete(prob_map, (0), axis=0)
 	
 	# MRF
-	prob_map = compute_prob_map()
+	# prob_map = compute_prob_map()
 	Seg_Label, seg_Label, seg_accuracy = Post_Processing(prob_map, Height, Width, n_classes, y_test_scalar, TestIndex)
 	
 	print('The shape of prob_map is (%d,%d)' % (prob_map.shape[0], prob_map.shape[1]))
