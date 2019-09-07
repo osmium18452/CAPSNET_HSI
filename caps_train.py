@@ -167,7 +167,8 @@ with tf.Session() as sess:
 			print("Iteraion", '%04d,' % (iteration), \
 				  "Batch cost=%.4f," % (batch_cost), \
 				  "Training Accuracy=%.4f" % (train_acc))
-		if iteration % 1000 == 0:
+		
+		if iteration % 1000 == 10000:
 			print('Training Data Eval: Training Accuracy = %.4f' % sess.run(accuracy, \
 																			feed_dict={x: x_train, y: y_train}))
 			print('Test Data Eval: Test Accuracy = %.4f' % sess.run(accuracy, \
@@ -175,7 +176,7 @@ with tf.Session() as sess:
 	print("Optimization Finished!")
 	
 	# Test model
-	print("The Final Test Accuracy is :", sess.run(accuracy, feed_dict={x: x_test, y: y_test}))
+	# print("The Final Test Accuracy is :", sess.run(accuracy, feed_dict={x: x_test, y: y_test}))
 	
 	# Obtain the probabilistic map
 	All_data['patch'] = np.transpose(All_data['patch'], (0, 2, 3, 1))
