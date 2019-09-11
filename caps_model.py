@@ -11,7 +11,7 @@ def CapsNet(X):
 	X=tf.reshape(X,[-1,patch_size,patch_size,num_band])
 	# First layer, convolutional.
 	conv1_params = {
-		"filters": 256,
+		"filters": 512,
 		"kernel_size": 3,
 		"strides": 1,
 		"padding": "valid",

@@ -26,21 +26,21 @@ parser.add_argument("-g", "--gpu", default="0", type=str,
 parser.add_argument("-i", "--iteration", default=50000, type=int,
 					help="Iterations for training.")
 parser.add_argument("-d", "--directory", default="./saved_model",
-					help="none.")
+					help="The directory you want to save your model.")
 parser.add_argument("-b", "--batch", default=100,type=int,
-					help="none.")
+					help="Set batch size.")
 parser.add_argument("-m", "--model", default=2,type=int,
-					help="none.")
+					help="Use which model to train and predict.")
 parser.add_argument("-r","--restore",default=False,
-					help="none.")
+					help="Restore the trained model or not. True or False")
 parser.add_argument("--recons",default=True,
-					help="none.")
+					help="Reconstruct. NOT supported currently.")
 parser.add_argument("-c","--cost",default="margin",
-					help="none.")
+					help="Use margin loss or cross entropy as loss function. 'margin' for margin loss or 'cross' for cross entropy.")
 parser.add_argument("-a","--ratio",default=0.1,type=float,
-					help="none.")
+					help="NOT supported currently.")
 parser.add_argument("-p","--patch_size",default=9,type=int,
-					help="none.")
+					help="NOT supported currently.")
 args = parser.parse_args()
 
 print(args)
