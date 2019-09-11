@@ -66,3 +66,11 @@ installing it into Windows. So I recommend you to install it into a Linux-based 
 `git clone git@github.com:osmium18452/CAPSNET_HSI.git`
 
 2. Run `python caps_train.py` to run with default settings. Run `python caps_train --help` for more options.
+
+---
+
+##Current problems.
+1. The model won't converge anymore when the cross entropy loss decrease to 2.6 or when the margin loss decrease to 
+0.08(Though it looks small but the possibility it calculates for each class is very close.)
+
+2. Sometimes it the model can't be trained on a GPU but sometimes it can. On CPU this situation won't happen.
