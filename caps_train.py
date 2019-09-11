@@ -15,7 +15,7 @@ import os
 import scipy.io
 # from cnn_model import conv_net
 import time
-from caps_model import CapsNet, CapsNet_2, CapsNet_3
+from caps_model import CapsNet, CapsNet_2, CapsNet_3, reconstruct
 import argparse
 
 parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
@@ -32,6 +32,14 @@ parser.add_argument("-b", "--batch", default=100,type=int,
 parser.add_argument("-m", "--model", default=2,type=int,
 					help="none.")
 parser.add_argument("-r","--restore",default=False,
+					help="none.")
+parser.add_argument("--recons",default=True,
+					help="none.")
+parser.add_argument("-c","--cost",default="margin",
+					help="none.")
+parser.add_argument("-a","--ratio",default=0.1,type=float,
+					help="none.")
+parser.add_argument("-p","--patch_size",default=9,type=int,
 					help="none.")
 args = parser.parse_args()
 
@@ -98,11 +106,14 @@ y = tf.placeholder(shape=[None, n_classes], dtype=tf.int64, name="y")
 # capsOutput = CapsNet_2(x)
 if args.model == 1:
 	capsOutput = CapsNet(x)
+	print("model 1 loaded.")
 else:
-	if args.model ==2 :
+	if args.model == 2 :
 		capsOutput = CapsNet_2(x)
+		print("model 2 loaded.")
 	else:
 		capsOutput = CapsNet_3(x)
+		print("model 3 loaded.")
 # Calculate the probability.
 y_prob = safe_norm(capsOutput, axis=-2, name="y_prob")
 pred = tf.squeeze(y_prob)
@@ -138,7 +149,14 @@ absent_error = tf.reshape(absent_error_raw, shape=(-1, n_classes), name="absent_
 
 L = tf.add(T * present_error, lambda_ * (1.0 - T) * absent_error, name="L")
 margin_loss = tf.reduce_mean(tf.reduce_sum(L, axis=1), name="margin_loss")
-cost = margin_loss
+
+cross_entropy=tf.nn.softmax_cross_entropy_with_logits(labels=y,logits=softmax_output)
+
+if args.cost=="margin":
+	cost = margin_loss
+else:
+	cost=tf.reduce_mean(cross_entropy)
+
 
 '''
 # Construct model
@@ -184,8 +202,11 @@ with tf.Session() as sess:
 # Launch the graph
 saver = tf.train.Saver()
 with tf.Session() as sess:
-	if args.restore and os.path.exists(save_path):
+	if args.restore and os.path.exists(args.directory):
 		saver.restore(sess,save_path)
+		print()
+		print("model restored.")
+		print()
 	else:
 		sess.run(init)
 	# Training cycle

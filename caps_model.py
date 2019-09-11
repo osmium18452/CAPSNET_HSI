@@ -383,3 +383,35 @@ def CapsNet_3(X):
 	
 	return caps2_output_3
 
+
+def reconstruct(capsOutput, mask_with_labels, X, y, y_pred, Labels, outputDimension):
+	# A normal 3-layer fully connected neuron network.
+	# Mask
+	# mask_with_labels = tf.placeholder_with_default(False, shape=(), name="mask_with_labels")
+	reconstruction_target = tf.cond(mask_with_labels, lambda: y, lambda: y_pred, name="reconstruction_target")
+	reconstruction_mask = tf.one_hot(reconstruction_target, depth=Labels, name="reconstruction_mask")
+	reconstruction_mask_reshaped = tf.reshape(
+		reconstruction_mask, [-1, 1, Labels, 1, 1],
+		name="reconstruction_mask_reshaped")
+	capsOutput_masked = tf.multiply(
+		capsOutput, reconstruction_mask_reshaped,
+		name="caps2_output_masked")
+	decoder_input = tf.reshape(capsOutput_masked, [-1, Labels * outputDimension])
+
+	# Decoder
+	# Tow relu and a sigmoid
+	n_hidden1 = 512
+	n_hidden2 = 1024
+	n_output = 28 * 28
+
+	with tf.name_scope("decoder"):
+		hidden1 = tf.layers.dense(decoder_input, n_hidden1, activation=tf.nn.relu, name="hidden1")
+		hidden2 = tf.layers.dense(hidden1, n_hidden2, activation=tf.nn.relu, name="hidden2")
+		decoder_output = tf.layers.dense(hidden2, n_output, activation=tf.nn.sigmoid, name="decoder_output")
+
+	# Reconstruction loss.
+	X_flat = tf.reshape(X, [-1, n_output], name="X_flat")
+	squared_difference = tf.square(X_flat - decoder_output, name="squared_difference")
+	reconstruction_loss = tf.reduce_mean(squared_difference, name="reconstruction_loss")
+
+	return reconstruction_loss, decoder_output

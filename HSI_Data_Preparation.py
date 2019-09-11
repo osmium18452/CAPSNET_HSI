@@ -106,7 +106,7 @@ def DataDivide(Classes_k, Num_Train_Each_Class_k, Classes_Index_k):
 
 ## Make a train and test split 
 # method 1: fixed proportion
-train_frac = 0.8
+train_frac = 0.2
 Num_Train_Each_Class = [math.ceil(train_frac * x) for x in Num_Each_Class]
 Num_Train_Each_Class = [int(x) for x in Num_Train_Each_Class]
 
