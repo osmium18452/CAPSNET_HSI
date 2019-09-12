@@ -1,4 +1,4 @@
-#Summary of the code for processing HSI data with capsule network
+# Summary of the code for processing HSI data with capsule network
 
 The code failed to classify the HSI patches because it didn't converge.
 
