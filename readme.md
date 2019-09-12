@@ -3,6 +3,7 @@
 The code failed to classify the HSI patches because it didn't converge.
 
 ## What does each file do
+
 - `caps_model.py` includes the model we use.
 - `caps_train.py` loads the data and defines how the model should be trained.
 - `HSI_Data_Preparation.py` reads the original .mat data and processes it to patches with specific size. 
@@ -12,6 +13,7 @@ The code failed to classify the HSI patches because it didn't converge.
 ---
 
 ## How did I write the project
+
 The project is based on the github repository [CNN_HSIC_MRF](https://github.com/xiangyongcao/CNN_HSIC_MRF). I modified 
 the `cnn_train.py` to `caps_train.py`. So they're almost the same. I wrote the caps_model.py to store the caps model. I
 modified the [notebook file](https://github.com/ageron/handson-ml/blob/master/extra_capsnets-cn.ipynb) to create the 
@@ -20,6 +22,7 @@ CapsNet model. The `HSI_Data_Preparation.py` and `utils.py` are directly copied 
 --- 
 
 ## How does the project work
+
 The `caps_train.py` is the main file of this project. It calls `the HSI_Data_Preparation.py` to prepare the data and 
 store the patches into tow dictionaries and feed them to the CapsNet model defined in `caps_model.py.` Then the model 
 will be trained with specific hyper parameters. After training, the model is saved to the directory you specified. The 
@@ -30,6 +33,7 @@ feed it into a Markov Random Field to smooth the segmented graph.)
 ---
 
 ## Structure of the capsule network
+
 I defined three CapsNet models in the `caps_model.py`. 
 
 The first one is similar to the one Hiton used in his paper 
@@ -43,7 +47,9 @@ The second one has two more convolution layers. The third one has one more capsu
 --- 
 
 ## How to run the project
+
 ### Environment
+
 - `python` I use 3.5, but 3.6 or 3.7 should be OK. 3.4 or lower python 3 is not recommended because i don't know 
 whether they will cause errors or not. Python 2 isn't compatible.
 
@@ -63,6 +69,7 @@ installing it into Windows. So I recommend you to install it into a Linux-based 
 - `pillow` 6.1.0 is recommended but other versions should be OK.
 
 ### Run
+
 1. Clone or download the repository from [github](https://github.com/osmium18452/CAPSNET_HSI)
 `git clone git@github.com:osmium18452/CAPSNET_HSI.git`
 
@@ -70,7 +77,8 @@ installing it into Windows. So I recommend you to install it into a Linux-based 
 
 ---
 
-## Current issues.
+## Current issues
+
 1. The model won't converge anymore when the cross entropy loss decrease to 2.6 or when the margin loss decrease to 
 0.08(Though it looks small but the possibility it calculates for each class is very close. See `100data.txt` for the 
 result it calculated.).
