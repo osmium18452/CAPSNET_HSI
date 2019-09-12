@@ -30,6 +30,7 @@ will be trained with specific hyper parameters. After training, the model is sav
 (Currently it will be saved to the file `./prob_map.mat`. You may sooner be able to specify the directory you want to 
 save the prob map. But I haven't written this function because it's not very urgent.) for later process. (For example, 
 feed it into a Markov Random Field to smooth the segmented graph.)
+
 ---
 
 ## Structure of the capsule network
