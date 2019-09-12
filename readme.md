@@ -13,8 +13,9 @@ The code failed to classify the HSI patches because it didn't converge.
 
 ## How did I write the project
 The project is based on the github repository [CNN_HSIC_MRF](https://github.com/xiangyongcao/CNN_HSIC_MRF). I modified 
-the `cnn_train.py` to `caps_train.py`. So they're almost the same. I wrote the caps_model.py to store the caps model. 
-The `HSI_Data_Preparation.py` and `utils.py` are directly copied from the repository.
+the `cnn_train.py` to `caps_train.py`. So they're almost the same. I wrote the caps_model.py to store the caps model. I
+modified the [notebook file](https://github.com/ageron/handson-ml/blob/master/extra_capsnets-cn.ipynb) to create the 
+CapsNet model. The `HSI_Data_Preparation.py` and `utils.py` are directly copied from the repository. 
 
 --- 
 
@@ -35,7 +36,7 @@ The first one is similar to the one Hiton used in his paper
 [Dynamic Routing Between Capsules](https://arxiv.org/abs/1710.09829). One convolution layer, one primary layer and one
 output layer. The capsule layer uses 512 3*3 filters to extract feature maps. The primary layer accept the output of 
 the convolution layer and feed it to 288 capsules with dimension of [8]. The output layer contains 16 capsules with 
-dimension of [num_classes].
+dimension of [num_classes]. The primary layer and the output layer deployed the dynamic routing.
 
 The second one has two more convolution layers. The third one has one more capsule layer than the second one. 
 
@@ -69,8 +70,21 @@ installing it into Windows. So I recommend you to install it into a Linux-based 
 
 ---
 
-##Current problems.
+## Current issues.
 1. The model won't converge anymore when the cross entropy loss decrease to 2.6 or when the margin loss decrease to 
-0.08(Though it looks small but the possibility it calculates for each class is very close.)
+0.08(Though it looks small but the possibility it calculates for each class is very close. See `100data.txt` for the 
+result it calculated.).
 
-2. Sometimes it the model can't be trained on a GPU but sometimes it can. On CPU this situation won't happen.
+2. Sometimes it the model can't be trained on a GPU but sometimes it can. On CPU this situation won't happen. But it 
+doesn't matter because it seems training on GPU (RTX 2080Ti) is not faster than on CPU (Dual Xeon E5-2678 with 64 GiB).
+
+---
+
+## Presumed reason
+
+No obvious reason has been found. Personally I think the CapsNet model is incompatible with the multi-channel dataset. 
+I find the CapsNet I wrote converges quickly when training with single-channel dataset, such as MNIST, SmallNORB. But 
+when training on multi-channel graph dataset, it will stop converging around a specific point. The model I wrote may 
+have some defects. But it converged well on MNIST. Some time earlier i build another CapsNet model with the 
+[CapsLayer](https://github.com/naturomics/CapsLayer) on github. But it stopped converging when the cross entropy loss 
+decreased to 2.5, just the same as the one in this repository.
