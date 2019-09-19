@@ -11,7 +11,7 @@ def CapsNet(X):
 	X=tf.reshape(X,[-1,patch_size,patch_size,num_band])
 	# First layer, convolutional.
 	conv1_params = {
-		"filters": 512,
+		"filters": 64,
 		"kernel_size": 3,
 		"strides": 1,
 		"padding": "valid",
@@ -20,6 +20,7 @@ def CapsNet(X):
 	}
 	# Use 256 9*9 filters to extract features in the first conv layer.
 	conv1 = tf.layers.conv2d(X, **conv1_params)
+	conv1 = tf.layers.max_pooling2d(conv1,2,strides=1,padding="same")
 	
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
