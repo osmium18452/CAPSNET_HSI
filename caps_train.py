@@ -15,7 +15,7 @@ import os
 import scipy.io
 # from cnn_model import conv_net
 import time
-from caps_model import CapsNet, CapsNet_2, CapsNet_3, reconstruct
+from caps_model import CapsNet, CapsNet_2, CapsNet_3, reconstruct,CapsNetWithPooling
 import argparse
 
 parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
@@ -29,7 +29,7 @@ parser.add_argument("-d", "--directory", default="./saved_model",
 					help="The directory you want to save your model.")
 parser.add_argument("-b", "--batch", default=100,type=int,
 					help="Set batch size.")
-parser.add_argument("-m", "--model", default=2,type=int,
+parser.add_argument("-m", "--model", default=4,type=int,
 					help="Use which model to train and predict.")
 parser.add_argument("-r","--restore",default=False,
 					help="Restore the trained model or not. True or False")
@@ -112,8 +112,12 @@ else:
 		capsOutput = CapsNet_2(x)
 		print("model 2 loaded.")
 	else:
-		capsOutput = CapsNet_3(x)
-		print("model 3 loaded.")
+		if args.model==3:
+			capsOutput = CapsNet_3(x)
+			print("model 3 loaded.")
+		else:
+			capsOutput=CapsNetWithPooling(x)
+			print("model with pooling loaded.")
 # Calculate the probability.
 y_prob = safe_norm(capsOutput, axis=-2, name="y_prob")
 pred = tf.squeeze(y_prob)
