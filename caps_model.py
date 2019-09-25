@@ -1,10 +1,28 @@
 import tensorflow as tf
 import numpy as np
-from utils import squash,patch_size
-
+from utils import squash, patch_size
+from tensorflow.contrib import slim
 
 num_band = 220  # paviaU 103
 num_classes = 16
+
+
+def conv_net(x):
+	with slim.arg_scope([slim.conv2d, slim.fully_connected],
+						activation_fn=tf.nn.relu):
+		net = tf.reshape(x, [-1, patch_size, patch_size, num_band])
+		net = slim.conv2d(net, 300, 3, padding='VALID',
+						  weights_initializer=tf.contrib.layers.xavier_initializer())
+		net = slim.max_pool2d(net, 2, padding='SAME')
+		net = slim.conv2d(net, 200, 3, padding='VALID',
+						  weights_initializer=tf.contrib.layers.xavier_initializer())
+		net = slim.max_pool2d(net, 2, padding='SAME')
+		net = slim.flatten(net)
+		
+		net = slim.fully_connected(net, 200)
+		net = slim.fully_connected(net, 100)
+		logits = slim.fully_connected(net, num_classes, activation_fn=None)
+	return logits
 
 
 def CapsNetWithPooling(X):
@@ -102,9 +120,10 @@ def CapsNetWithPooling(X):
 	
 	return caps2_output_3
 
+
 def CapsNet(X):
 	print(X.shape[0])
-	X=tf.reshape(X,[-1,patch_size,patch_size,num_band])
+	X = tf.reshape(X, [-1, patch_size, patch_size, num_band])
 	# First layer, convolutional.
 	conv1_params = {
 		"filters": 64,
@@ -221,7 +240,7 @@ def CapsNet_2(X):
 		"activation": tf.nn.relu,
 		"name": "conv1_1"
 	}
-	conv1_1 =tf.layers.conv2d(conv1,**conv1_params_2)
+	conv1_1 = tf.layers.conv2d(conv1, **conv1_params_2)
 	
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
@@ -346,7 +365,8 @@ def CapsNet_2(X):
 	# Multiply and sum
 	weighted_prediction_round2 = tf.multiply(routing_weights_round2, caps3_predicted,
 											 name="weighted_prediction_round_22")
-	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True, name="weighted_sum_round_22")
+	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True,
+										name="weighted_sum_round_22")
 	caps2_output_2 = squash(weighted_sum_round2, axis=-2, name="caps2_output_round_22")
 	
 	# Third round
@@ -359,7 +379,8 @@ def CapsNet_2(X):
 	# Multiply and sum
 	weighted_prediction_round3 = tf.multiply(routing_weights_round3, caps3_predicted,
 											 name="weighted_prediction_round_22")
-	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True, name="weighted_sum_round_22")
+	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True,
+										name="weighted_sum_round_22")
 	caps2_output_3 = squash(weighted_sum_round3, axis=-2, name="caps2_output_round_32")
 	
 	return caps2_output_3
@@ -494,21 +515,21 @@ def reconstruct(capsOutput, mask_with_labels, X, y, y_pred, Labels, outputDimens
 		capsOutput, reconstruction_mask_reshaped,
 		name="caps2_output_masked")
 	decoder_input = tf.reshape(capsOutput_masked, [-1, Labels * outputDimension])
-
+	
 	# Decoder
 	# Tow relu and a sigmoid
 	n_hidden1 = 512
 	n_hidden2 = 1024
 	n_output = 28 * 28
-
+	
 	with tf.name_scope("decoder"):
 		hidden1 = tf.layers.dense(decoder_input, n_hidden1, activation=tf.nn.relu, name="hidden1")
 		hidden2 = tf.layers.dense(hidden1, n_hidden2, activation=tf.nn.relu, name="hidden2")
 		decoder_output = tf.layers.dense(hidden2, n_output, activation=tf.nn.sigmoid, name="decoder_output")
-
+	
 	# Reconstruction loss.
 	X_flat = tf.reshape(X, [-1, n_output], name="X_flat")
 	squared_difference = tf.square(X_flat - decoder_output, name="squared_difference")
 	reconstruction_loss = tf.reduce_mean(squared_difference, name="reconstruction_loss")
-
+	
 	return reconstruction_loss, decoder_output
