@@ -35,7 +35,7 @@ parser.add_argument("-r","--restore",default=False,
 					help="Restore the trained model or not. True or False")
 parser.add_argument("--recons",default=True,
 					help="Reconstruct. NOT supported currently.")
-parser.add_argument("-c","--cost",default="margin",
+parser.add_argument("-c","--cost",default="cross",
 					help="Use margin loss or cross entropy as loss function. 'margin' for margin loss or 'cross' for cross entropy.")
 parser.add_argument("-a","--ratio",default=0.1,type=float,
 					help="NOT supported currently.")
