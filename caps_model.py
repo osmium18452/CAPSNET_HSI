@@ -18,7 +18,7 @@ def conv_net(x):
 						  weights_initializer=tf.contrib.layers.xavier_initializer())
 		net = slim.max_pool2d(net, 2, padding='SAME')
 		net = slim.flatten(net)
-		
+
 		net = slim.fully_connected(net, 200)
 		net = slim.fully_connected(net, 100)
 		logits = slim.fully_connected(net, num_classes, activation_fn=None)
@@ -30,17 +30,28 @@ def CapsNetWithPooling(X):
 	X = tf.reshape(X, [-1, patch_size, patch_size, num_band])
 	# First layer, convolutional.
 	conv1_params = {
-		"filters": 64,
-		"kernel_size": 4,
+		"filters": 300,
+		"kernel_size": 3,
 		"strides": 1,
-		"padding": "same",
+		"padding": "valid",
 		"activation": tf.nn.relu,
 		"name": "conv1"
 	}
 	# Use 256 9*9 filters to extract features in the first conv layer.
 	conv1 = tf.layers.conv2d(X, **conv1_params)
 	conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
-	
+
+	conv1_params = {
+		"filters": 200,
+		"kernel_size": 3,
+		"strides": 1,
+		"padding": "valid",
+		"activation": tf.nn.relu,
+		"name": "conv1_2"
+	}
+	conv1 = tf.layers.conv2d(conv1, **conv1_params)
+	conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
+
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
@@ -59,7 +70,7 @@ def CapsNetWithPooling(X):
 	caps1_raw = tf.reshape(conv2, [-1, caps1_caps, caps1_dims], name="caps1_raw")
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
-	
+
 	# Digit layer
 	# 10 capsule in the digit layer and each capsule outputs a vector with dimension of 16.
 	caps2_caps = num_classes
@@ -78,12 +89,12 @@ def CapsNetWithPooling(X):
 	caps1_output_expanded = tf.expand_dims(caps1_output_expanded, 2, name="caps1_output_expanded2")
 	caps1_output_tiled = tf.tile(caps1_output_expanded, [1, 1, caps2_caps, 1, 1], name="caps1_output_tiled")
 	caps2_predicted = tf.matmul(w_tiled, caps1_output_tiled, name="caps2_predicted")
-	
+
 	# Dynamic routing.
 	# FIXME: There may be something wrong...
 	# Initialize b_i,j
 	raw_weights = tf.zeros([batch_size, caps1_caps, caps2_caps, 1, 1], dtype=np.float32, name="raw_weights")
-	
+
 	# First round.
 	# Use softmax to calculate c=softmax(b).
 	routing_weights = tf.nn.softmax(raw_weights, dim=2, name="routing_weights")
@@ -91,7 +102,7 @@ def CapsNetWithPooling(X):
 	weighted_prediction = tf.multiply(routing_weights, caps2_predicted, name="weighted_prediction")
 	weighted_sum = tf.reduce_sum(weighted_prediction, axis=1, keep_dims=True, name="weighted_sum")
 	caps2_output_1 = squash(weighted_sum, axis=-2, name="caps2_output_round_1")
-	
+
 	# Second round
 	caps2_output_1_tiled = tf.tile(caps2_output_1, [1, caps1_caps, 1, 1, 1], name="caps2_1st_output_tiled")
 	# Update the new b_i,j
@@ -104,7 +115,7 @@ def CapsNetWithPooling(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_2 = squash(weighted_sum_round2, axis=-2, name="caps2_output_round_2")
-	
+
 	# Third round
 	caps2_output_3_tiled = tf.tile(caps2_output_2, [1, caps1_caps, 1, 1, 1], name="caps2_2nd_output_tiled")
 	# Update the new b_i,j
@@ -117,7 +128,7 @@ def CapsNetWithPooling(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_3 = squash(weighted_sum_round3, axis=-2, name="caps2_output_round_3")
-	
+
 	return caps2_output_3
 
 
@@ -136,7 +147,7 @@ def CapsNet(X):
 	# Use 256 9*9 filters to extract features in the first conv layer.
 	conv1 = tf.layers.conv2d(X, **conv1_params)
 	# conv1 = tf.layers.max_pooling2d(conv1,2,strides=1,padding="same")
-	
+
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
@@ -155,7 +166,7 @@ def CapsNet(X):
 	caps1_raw = tf.reshape(conv2, [-1, caps1_caps, caps1_dims], name="caps1_raw")
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
-	
+
 	# Digit layer
 	# 10 capsule in the digit layer and each capsule outputs a vector with dimension of 16.
 	caps2_caps = num_classes
@@ -174,12 +185,12 @@ def CapsNet(X):
 	caps1_output_expanded = tf.expand_dims(caps1_output_expanded, 2, name="caps1_output_expanded2")
 	caps1_output_tiled = tf.tile(caps1_output_expanded, [1, 1, caps2_caps, 1, 1], name="caps1_output_tiled")
 	caps2_predicted = tf.matmul(w_tiled, caps1_output_tiled, name="caps2_predicted")
-	
+
 	# Dynamic routing.
 	# FIXME: There may be something wrong...
 	# Initialize b_i,j
 	raw_weights = tf.zeros([batch_size, caps1_caps, caps2_caps, 1, 1], dtype=np.float32, name="raw_weights")
-	
+
 	# First round.
 	# Use softmax to calculate c=softmax(b).
 	routing_weights = tf.nn.softmax(raw_weights, dim=2, name="routing_weights")
@@ -187,7 +198,7 @@ def CapsNet(X):
 	weighted_prediction = tf.multiply(routing_weights, caps2_predicted, name="weighted_prediction")
 	weighted_sum = tf.reduce_sum(weighted_prediction, axis=1, keep_dims=True, name="weighted_sum")
 	caps2_output_1 = squash(weighted_sum, axis=-2, name="caps2_output_round_1")
-	
+
 	# Second round
 	caps2_output_1_tiled = tf.tile(caps2_output_1, [1, caps1_caps, 1, 1, 1], name="caps2_1st_output_tiled")
 	# Update the new b_i,j
@@ -200,7 +211,7 @@ def CapsNet(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_2 = squash(weighted_sum_round2, axis=-2, name="caps2_output_round_2")
-	
+
 	# Third round
 	caps2_output_3_tiled = tf.tile(caps2_output_2, [1, caps1_caps, 1, 1, 1], name="caps2_2nd_output_tiled")
 	# Update the new b_i,j
@@ -213,7 +224,7 @@ def CapsNet(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_3 = squash(weighted_sum_round3, axis=-2, name="caps2_output_round_3")
-	
+
 	return caps2_output_3
 
 
@@ -231,7 +242,7 @@ def CapsNet_2(X):
 	}
 	# Use 256 3*3 filters to extract features in the first conv layer.
 	conv1 = tf.layers.conv2d(X, **conv1_params)
-	
+
 	conv1_params_2 = {
 		"filters": 150,
 		"kernel_size": 3,
@@ -241,7 +252,7 @@ def CapsNet_2(X):
 		"name": "conv1_1"
 	}
 	conv1_1 = tf.layers.conv2d(conv1, **conv1_params_2)
-	
+
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
@@ -261,7 +272,7 @@ def CapsNet_2(X):
 	# caps1_caps=tf.shape(caps1_raw)[1]
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
-	
+
 	# Digit layer
 	# 10 capsule in the digit layer and each capsule outputs a vector with dimension of 16.
 	caps2_caps = 150
@@ -280,12 +291,12 @@ def CapsNet_2(X):
 	caps1_output_expanded = tf.expand_dims(caps1_output_expanded, 2, name="caps1_output_expanded2")
 	caps1_output_tiled = tf.tile(caps1_output_expanded, [1, 1, caps2_caps, 1, 1], name="caps1_output_tiled")
 	caps2_predicted = tf.matmul(w_tiled, caps1_output_tiled, name="caps2_predicted")
-	
+
 	# Dynamic routing.
 	# FIXME: There may be something wrong...
 	# Initialize b_i,j
 	raw_weights = tf.zeros([batch_size, caps1_caps, caps2_caps, 1, 1], dtype=np.float32, name="raw_weights")
-	
+
 	# First round.
 	# Use softmax to calculate c=softmax(b).
 	routing_weights = tf.nn.softmax(raw_weights, dim=2, name="routing_weights")
@@ -293,7 +304,7 @@ def CapsNet_2(X):
 	weighted_prediction = tf.multiply(routing_weights, caps2_predicted, name="weighted_prediction")
 	weighted_sum = tf.reduce_sum(weighted_prediction, axis=1, keep_dims=True, name="weighted_sum")
 	caps2_output_1 = squash(weighted_sum, axis=-2, name="caps2_output_round_1")
-	
+
 	# Second round
 	caps2_output_1_tiled = tf.tile(caps2_output_1, [1, caps1_caps, 1, 1, 1], name="caps2_1st_output_tiled")
 	# Update the new b_i,j
@@ -306,7 +317,7 @@ def CapsNet_2(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_2 = squash(weighted_sum_round2, axis=-2, name="caps2_output_round_2")
-	
+
 	# Third round
 	caps2_output_3_tiled = tf.tile(caps2_output_2, [1, caps1_caps, 1, 1, 1], name="caps2_2nd_output_tiled")
 	# Update the new b_i,j
@@ -319,7 +330,7 @@ def CapsNet_2(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_3 = tf.squeeze(squash(weighted_sum_round3, axis=-2, name="caps2_output_round_3"))
-	
+
 	# another capslayer.
 	caps3_caps = num_classes
 	caps3_dims = 16
@@ -341,12 +352,12 @@ def CapsNet_2(X):
 	print(tf.shape(caps2_output_tiled))
 	print()
 	caps3_predicted = tf.matmul(w_2_tiled, caps2_output_tiled, name="caps2_predicted2")
-	
+
 	# Dynamic routing.
 	# FIXME: There may be something wrong...
 	# Initialize b_i,j
 	raw_weights = tf.zeros([batch_size, caps2_caps, caps3_caps, 1, 1], dtype=np.float32, name="raw_weights2")
-	
+
 	# First round.
 	# Use softmax to calculate c=softmax(b).
 	routing_weights = tf.nn.softmax(raw_weights, dim=2, name="routing_weights2")
@@ -354,7 +365,7 @@ def CapsNet_2(X):
 	weighted_prediction = tf.multiply(routing_weights, caps3_predicted, name="weighted_prediction2")
 	weighted_sum = tf.reduce_sum(weighted_prediction, axis=1, keep_dims=True, name="weighted_sum2")
 	caps2_output_1 = squash(weighted_sum, axis=-2, name="caps2_output_round_12")
-	
+
 	# Second round
 	caps2_output_1_tiled = tf.tile(caps2_output_1, [1, caps2_caps, 1, 1, 1], name="caps2_1st_output_tiled2")
 	# Update the new b_i,j
@@ -368,7 +379,7 @@ def CapsNet_2(X):
 	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True,
 										name="weighted_sum_round_22")
 	caps2_output_2 = squash(weighted_sum_round2, axis=-2, name="caps2_output_round_22")
-	
+
 	# Third round
 	caps2_output_3_tiled = tf.tile(caps2_output_2, [1, caps2_caps, 1, 1, 1], name="caps2_2nd_output_tiled2")
 	# Update the new b_i,j
@@ -382,7 +393,7 @@ def CapsNet_2(X):
 	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True,
 										name="weighted_sum_round_22")
 	caps2_output_3 = squash(weighted_sum_round3, axis=-2, name="caps2_output_round_32")
-	
+
 	return caps2_output_3
 
 
@@ -400,7 +411,7 @@ def CapsNet_3(X):
 	}
 	# Use 256 3*3 filters to extract features in the first conv layer.
 	conv1 = tf.layers.conv2d(X, **conv1_params)
-	
+
 	conv1_params_2 = {
 		"filters": 128,
 		"kernel_size": 3,
@@ -410,7 +421,7 @@ def CapsNet_3(X):
 		"name": "conv1_1"
 	}
 	conv1_1 = tf.layers.conv2d(conv1, **conv1_params_2)
-	
+
 	conv1_params_3 = {
 		"filters": 256,
 		"kernel_size": 3,
@@ -420,7 +431,7 @@ def CapsNet_3(X):
 		"name": "conv1_2"
 	}
 	conv1_2 = tf.layers.conv2d(conv1_1, **conv1_params_3)
-	
+
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
@@ -440,7 +451,7 @@ def CapsNet_3(X):
 	# caps1_caps=tf.shape(caps1_raw)[1]
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
-	
+
 	# Digit layer
 	# 10 capsule in the digit layer and each capsule outputs a vector with dimension of 16.
 	caps2_caps = num_classes
@@ -459,12 +470,12 @@ def CapsNet_3(X):
 	caps1_output_expanded = tf.expand_dims(caps1_output_expanded, 2, name="caps1_output_expanded2")
 	caps1_output_tiled = tf.tile(caps1_output_expanded, [1, 1, caps2_caps, 1, 1], name="caps1_output_tiled")
 	caps2_predicted = tf.matmul(w_tiled, caps1_output_tiled, name="caps2_predicted")
-	
+
 	# Dynamic routing.
 	# FIXME: There may be something wrong...
 	# Initialize b_i,j
 	raw_weights = tf.zeros([batch_size, caps1_caps, caps2_caps, 1, 1], dtype=np.float32, name="raw_weights")
-	
+
 	# First round.
 	# Use softmax to calculate c=softmax(b).
 	routing_weights = tf.nn.softmax(raw_weights, dim=2, name="routing_weights")
@@ -472,7 +483,7 @@ def CapsNet_3(X):
 	weighted_prediction = tf.multiply(routing_weights, caps2_predicted, name="weighted_prediction")
 	weighted_sum = tf.reduce_sum(weighted_prediction, axis=1, keep_dims=True, name="weighted_sum")
 	caps2_output_1 = squash(weighted_sum, axis=-2, name="caps2_output_round_1")
-	
+
 	# Second round
 	caps2_output_1_tiled = tf.tile(caps2_output_1, [1, caps1_caps, 1, 1, 1], name="caps2_1st_output_tiled")
 	# Update the new b_i,j
@@ -485,7 +496,7 @@ def CapsNet_3(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round2 = tf.reduce_sum(weighted_prediction_round2, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_2 = squash(weighted_sum_round2, axis=-2, name="caps2_output_round_2")
-	
+
 	# Third round
 	caps2_output_3_tiled = tf.tile(caps2_output_2, [1, caps1_caps, 1, 1, 1], name="caps2_2nd_output_tiled")
 	# Update the new b_i,j
@@ -498,7 +509,7 @@ def CapsNet_3(X):
 											 name="weighted_prediction_round_2")
 	weighted_sum_round3 = tf.reduce_sum(weighted_prediction_round3, axis=1, keep_dims=True, name="weighted_sum_round_2")
 	caps2_output_3 = squash(weighted_sum_round3, axis=-2, name="caps2_output_round_3")
-	
+
 	return caps2_output_3
 
 
@@ -515,21 +526,21 @@ def reconstruct(capsOutput, mask_with_labels, X, y, y_pred, Labels, outputDimens
 		capsOutput, reconstruction_mask_reshaped,
 		name="caps2_output_masked")
 	decoder_input = tf.reshape(capsOutput_masked, [-1, Labels * outputDimension])
-	
+
 	# Decoder
 	# Tow relu and a sigmoid
 	n_hidden1 = 512
 	n_hidden2 = 1024
 	n_output = 28 * 28
-	
+
 	with tf.name_scope("decoder"):
 		hidden1 = tf.layers.dense(decoder_input, n_hidden1, activation=tf.nn.relu, name="hidden1")
 		hidden2 = tf.layers.dense(hidden1, n_hidden2, activation=tf.nn.relu, name="hidden2")
 		decoder_output = tf.layers.dense(hidden2, n_output, activation=tf.nn.sigmoid, name="decoder_output")
-	
+
 	# Reconstruction loss.
 	X_flat = tf.reshape(X, [-1, n_output], name="X_flat")
 	squared_difference = tf.square(X_flat - decoder_output, name="squared_difference")
 	reconstruction_loss = tf.reduce_mean(squared_difference, name="reconstruction_loss")
-	
+
 	return reconstruction_loss, decoder_output
