@@ -33,7 +33,7 @@ def CapsNetWithPooling(X):
 		"filters": 300,
 		"kernel_size": 3,
 		"strides": 1,
-		"padding": "valid",
+		"padding": "same",
 		"activation": tf.nn.relu,
 		"name": "conv1"
 	}
@@ -45,7 +45,7 @@ def CapsNetWithPooling(X):
 		"filters": 200,
 		"kernel_size": 3,
 		"strides": 1,
-		"padding": "valid",
+		"padding": "same",
 		"activation": tf.nn.relu,
 		"name": "conv1_2"
 	}
