@@ -24,8 +24,8 @@ start_time = time.time()
 
 ## Load data
 DATA_PATH = os.path.join(os.getcwd(), "Data")
-Data = scipy.io.loadmat(os.path.join(DATA_PATH, 'Indian_pines.mat'))['indian_pines']
-Label = scipy.io.loadmat(os.path.join(DATA_PATH, 'Indian_pines_gt.mat'))['indian_pines_gt']
+Data = scipy.io.loadmat(os.path.join(DATA_PATH, 'PaviaU.mat'))['paviaU']
+Label = scipy.io.loadmat(os.path.join(DATA_PATH, 'PaviaU_gt.mat'))['paviaU_gt']
 
 # Data = scipy.io.loadmat(os.path.join(DATA_PATH, 'PaviaU.mat'))['paviaU']
 # Label = scipy.io.loadmat(os.path.join(DATA_PATH, 'PaviaU_gt.mat'))['paviaU_gt']
@@ -106,7 +106,7 @@ def DataDivide(Classes_k, Num_Train_Each_Class_k, Classes_Index_k):
 
 ## Make a train and test split 
 # method 1: fixed proportion
-train_frac = 0.2
+train_frac = 0.05
 Num_Train_Each_Class = [math.ceil(train_frac * x) for x in Num_Each_Class]
 Num_Train_Each_Class = [int(x) for x in Num_Train_Each_Class]
 

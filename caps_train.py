@@ -93,7 +93,7 @@ learning_rate = 0.001
 training_iters = args.iteration
 batch_size = args.batch
 display_step = 500
-n_classes = 16
+n_classes = 9
 
 # tf Graph input
 # x = tf.placeholder("float", [None, n_input])
@@ -128,7 +128,7 @@ y_pred = tf.squeeze(y_prob_argmax, axis=[1, 2], name="y_pred")
 
 # margin loss
 Labels = n_classes
-outputDimension = 16
+outputDimension = 9
 
 # TODO: Modulize the loss function and the reconstruction process.
 # Training preparation

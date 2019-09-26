@@ -3,8 +3,8 @@ import numpy as np
 from utils import squash, patch_size
 from tensorflow.contrib import slim
 
-num_band = 220  # paviaU 103
-num_classes = 16
+num_band = 103  # paviaU 103
+num_classes = 9
 
 
 def conv_net(x):
@@ -30,10 +30,10 @@ def CapsNetWithPooling(X):
 	X = tf.reshape(X, [-1, patch_size, patch_size, num_band])
 	# First layer, convolutional.
 	conv1_params = {
-		"filters": 300,
-		"kernel_size": 3,
+		"filters": 64,
+		"kernel_size": 4,
 		"strides": 1,
-		"padding": "same",
+		"padding": "valid",
 		"activation": tf.nn.relu,
 		"name": "conv1"
 	}
@@ -41,16 +41,16 @@ def CapsNetWithPooling(X):
 	conv1 = tf.layers.conv2d(X, **conv1_params)
 	conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
 
-	conv1_params = {
-		"filters": 200,
-		"kernel_size": 3,
-		"strides": 1,
-		"padding": "same",
-		"activation": tf.nn.relu,
-		"name": "conv1_2"
-	}
-	conv1 = tf.layers.conv2d(conv1, **conv1_params)
-	conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
+	# conv1_params = {
+	# 	"filters": 200,
+	# 	"kernel_size": 3,
+	# 	"strides": 1,
+	# 	"padding": "same",
+	# 	"activation": tf.nn.relu,
+	# 	"name": "conv1_2"
+	# }
+	# conv1 = tf.layers.conv2d(conv1, **conv1_params)
+	# conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
 
 	# Primary layer. Contains a convolution layer and the first cpasule layer.\
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
