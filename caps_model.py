@@ -18,7 +18,6 @@ def conv_net(x):
 						  weights_initializer=tf.contrib.layers.xavier_initializer())
 		net = slim.max_pool2d(net, 2, padding='SAME')
 		net = slim.flatten(net)
-
 		net = slim.fully_connected(net, 200)
 		net = slim.fully_connected(net, 100)
 		logits = slim.fully_connected(net, num_classes, activation_fn=None)
