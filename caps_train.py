@@ -17,6 +17,7 @@ import scipy.io
 import time
 from caps_model import CapsNet, CapsNet_2, CapsNet_3, reconstruct,CapsNetWithPooling
 import argparse
+import pickle
 
 parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
 parser.add_argument("-e", "--epochs", default=10, type=int,
@@ -79,7 +80,9 @@ start_time = time.time()
 # pkfile = open("./saved_data/test.pkl", "rb")
 # Test_data = pickle.load(pkfile)
 
-Training_data, Test_data = HSI_Data_Preparation.Prepare_data()
+# Training_data, Test_data = HSI_Data_Preparation.Prepare_data()
+Training_data=pickle.load("./saved_data/training.pkl")
+Test_data=pickle.load("./saved_data/testing.pkl")
 n_input = Band * patch_size * patch_size
 
 Training_data['train_patch'] = np.transpose(Training_data['train_patch'], (0, 2, 3, 1))
