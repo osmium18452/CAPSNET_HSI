@@ -239,6 +239,7 @@ def CapsNet(X):
 
 
 def CapsNet_2(X):
+	# don't use this model.
 	print(X.shape[0])
 	X = tf.reshape(X, [-1, patch_size, patch_size, num_band])
 	# First layer, convolutional.

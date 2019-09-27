@@ -212,10 +212,13 @@ with tf.Session() as sess:
 		_, batch_cost, train_acc = sess.run([optimizer, cost, accuracy],
 											feed_dict={x: batch_x, y: batch_y})
 		# Display logs per epoch step
+		print("\riter:{:5d}  accuracy:{:.6f}  cost:{:.6f}".format(iteration,train_acc,batch_cost),end="")
+		"""
 		if iteration % 100 == 0:
 			print("Iteraion", '%04d,' % (iteration), \
 				  "Batch cost=%.4f," % (batch_cost), \
 				  "Training Accuracy=%.4f" % (train_acc))
+		"""
 		if iteration % 1000 == 999:
 			saver.save(sess, save_path)
 			print("model saved.")
@@ -236,7 +239,6 @@ with tf.Session() as sess:
 			print("%.5f"%i,end=" ")
 		print()
 	
-"""
 	# Obtain the probabilistic map
 	All_data['patch'] = np.transpose(All_data['patch'], (0, 2, 3, 1))
 	num_all = len(All_data['patch'])
@@ -250,7 +252,7 @@ with tf.Session() as sess:
 	prob_map = np.zeros((1, n_classes))
 	for i in range(times):
 		feed_x = np.reshape(np.asarray(All_data['patch'][start:start + Num_Each_File[i]]), (-1, n_input))
-		temp = sess.run(softmax_output, feed_dict={x: feed_x})
+		temp = sess.run(y_prob, feed_dict={x: feed_x})
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 		start += Num_Each_File[i]
 	
@@ -277,4 +279,3 @@ with tf.Session() as sess:
 	
 	end_time = time.time()
 	print('The elapsed time is %.2f' % (end_time - start_time))
-"""
