@@ -65,6 +65,7 @@ def CapsNetWithPooling(X):
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
 	caps1_maps = 32
+	caps1_caps=caps1_maps
 	caps1_dims = 8
 	conv2_params = {
 		"filters": caps1_maps * caps1_dims,
@@ -75,7 +76,7 @@ def CapsNetWithPooling(X):
 		"name": "conv2"
 	}
 	conv2 = tf.layers.conv2d(conv1, **conv2_params)
-	caps1_caps=np.prod(tf.squeeze(conv2.shape[1:4]))
+	# caps1_caps=np.prod(tf.squeeze(conv2.shape[1:4]))
 	caps1_raw = tf.reshape(conv2, [-1, caps1_caps, caps1_dims], name="caps1_raw")
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
