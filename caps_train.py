@@ -29,13 +29,13 @@ parser.add_argument("-d", "--directory", default="./saved_model",
 					help="The directory you want to save your model.")
 parser.add_argument("-b", "--batch", default=100,type=int,
 					help="Set batch size.")
-parser.add_argument("-m", "--model", default=4,type=int,
+parser.add_argument("-m", "--model", default=1,type=int,
 					help="Use which model to train and predict.")
 parser.add_argument("-r","--restore",default=False,
 					help="Restore the trained model or not. True or False")
 parser.add_argument("--recons",default=True,
 					help="Reconstruct. NOT supported currently.")
-parser.add_argument("-c","--cost",default="cross",
+parser.add_argument("-c","--cost",default="margin",
 					help="Use margin loss or cross entropy as loss function. 'margin' for margin loss or 'cross' for cross entropy.")
 parser.add_argument("-a","--ratio",default=0.1,type=float,
 					help="NOT supported currently.")
@@ -191,17 +191,6 @@ if not os.path.exists(args.directory):
 	os.makedirs(args.directory)
 save_path = os.path.join(args.directory, "saved_model.ckpt")
 
-with tf.Session() as sess:
-	sess.run(init)
-	idx = np.random.choice(num_train, size=batch_size, replace=False)
-	# Use the random index to select random images and labels.
-	batch_x = Training_data['train_patch'][idx, :]
-	batch_y = Training_data['train_labels'][idx, :]
-	print()
-	print("============")
-	print(sess.run(y_prob, feed_dict={x: batch_x, y: batch_y}).shape)
-	print("===========")
-	print()
 
 # Launch the graph
 saver = tf.train.Saver()
@@ -238,10 +227,16 @@ with tf.Session() as sess:
 			print('Test Data Eval: Test Accuracy = %.4f' % sess.run(accuracy, \
 																	feed_dict={x: test_batch_x, y: test_batch_y}))
 	print("Optimization Finished!")
+
+with tf.Session() as sess:
+	saver.restore(sess,save_path)
+	arr=sess.run(tf.squeeze(y_prob),feed_dict={x:Training_data['train_patch'][0:10]})
+	for item in arr:
+		for i in item:
+			print("%.5f"%i,end=" ")
+		print()
 	
-	# Test model
-	# print("The Final Test Accuracy is :", sess.run(accuracy, feed_dict={x: x_test, y: y_test}))
-	
+"""
 	# Obtain the probabilistic map
 	All_data['patch'] = np.transpose(All_data['patch'], (0, 2, 3, 1))
 	num_all = len(All_data['patch'])
@@ -282,3 +277,4 @@ with tf.Session() as sess:
 	
 	end_time = time.time()
 	print('The elapsed time is %.2f' % (end_time - start_time))
+"""
