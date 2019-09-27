@@ -8,14 +8,14 @@ This code is modified based on https://github.com/KGPML/Hyperspectral
 from __future__ import print_function
 import tensorflow as tf
 import HSI_Data_Preparation
-from HSI_Data_Preparation import num_train, Band, All_data, TrainIndex, TestIndex, Height, Width
+from HSI_Data_Preparation import num_train, Band, All_data, TrainIndex, TestIndex, Height, Width,num_test
 from utils import patch_size, Post_Processing, safe_norm, squash
 import numpy as np
 import os
 import scipy.io
 # from cnn_model import conv_net
 import time
-from caps_model import CapsNet, CapsNet_2, CapsNet_3, reconstruct,CapsNetWithPooling
+from caps_model import CapsNet, CapsNet_2, CapsNet_3, reconstruct, CapsNetWithPooling
 import argparse
 import pickle
 
@@ -28,19 +28,19 @@ parser.add_argument("-i", "--iteration", default=50000, type=int,
 					help="Iterations for training.")
 parser.add_argument("-d", "--directory", default="./saved_model",
 					help="The directory you want to save your model.")
-parser.add_argument("-b", "--batch", default=100,type=int,
+parser.add_argument("-b", "--batch", default=100, type=int,
 					help="Set batch size.")
-parser.add_argument("-m", "--model", default=1,type=int,
+parser.add_argument("-m", "--model", default=4, type=int,
 					help="Use which model to train and predict.")
-parser.add_argument("-r","--restore",default=False,
+parser.add_argument("-r", "--restore", default=False,
 					help="Restore the trained model or not. True or False")
-parser.add_argument("--recons",default=True,
+parser.add_argument("--recons", default=True,
 					help="Reconstruct. NOT supported currently.")
-parser.add_argument("-c","--cost",default="margin",
+parser.add_argument("-c", "--cost", default="margin",
 					help="Use margin loss or cross entropy as loss function. 'margin' for margin loss or 'cross' for cross entropy.")
-parser.add_argument("-a","--ratio",default=0.1,type=float,
+parser.add_argument("-a", "--ratio", default=0.1, type=float,
 					help="NOT supported currently.")
-parser.add_argument("-p","--patch_size",default=9,type=int,
+parser.add_argument("-p", "--patch_size", default=9, type=int,
 					help="NOT supported currently.")
 args = parser.parse_args()
 
@@ -49,7 +49,7 @@ print(args)
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 
-def compute_prob_map():
+"""def compute_prob_map():
 	# Obtain the probabilistic map
 	num_all = len(All_data['patch'])
 	times = 20
@@ -67,7 +67,7 @@ def compute_prob_map():
 		start += Num_Each_File[i]
 	
 	prob_map = np.delete(prob_map, (0), axis=0)
-	return prob_map
+	return prob_map"""
 
 
 start_time = time.time()
@@ -96,7 +96,7 @@ learning_rate = 0.001
 training_iters = args.iteration
 batch_size = args.batch
 display_step = 500
-n_classes = 9
+n_classes = 16
 
 # tf Graph input
 # x = tf.placeholder("float", [None, n_input])
@@ -111,15 +111,15 @@ if args.model == 1:
 	capsOutput = CapsNet(x)
 	print("model 1 loaded.")
 else:
-	if args.model == 2 :
+	if args.model == 2:
 		capsOutput = CapsNet_2(x)
 		print("model 2 loaded.")
 	else:
-		if args.model==3:
+		if args.model == 3:
 			capsOutput = CapsNet_3(x)
 			print("model 3 loaded.")
 		else:
-			capsOutput=CapsNetWithPooling(x)
+			capsOutput = CapsNetWithPooling(x)
 			print("model with pooling loaded.")
 # Calculate the probability.
 y_prob = safe_norm(capsOutput, axis=-2, name="y_prob")
@@ -131,7 +131,7 @@ y_pred = tf.squeeze(y_prob_argmax, axis=[1, 2], name="y_pred")
 
 # margin loss
 Labels = n_classes
-outputDimension = 9
+outputDimension = 16
 
 # TODO: Modulize the loss function and the reconstruction process.
 # Training preparation
@@ -157,13 +157,12 @@ absent_error = tf.reshape(absent_error_raw, shape=(-1, n_classes), name="absent_
 L = tf.add(T * present_error, lambda_ * (1.0 - T) * absent_error, name="L")
 margin_loss = tf.reduce_mean(tf.reduce_sum(L, axis=1), name="margin_loss")
 
-cross_entropy=tf.nn.softmax_cross_entropy_with_logits(labels=y,logits=softmax_output)
+cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=softmax_output)
 
-if args.cost=="margin":
+if args.cost == "margin":
 	cost = margin_loss
 else:
-	cost=tf.reduce_mean(cross_entropy)
-
+	cost = tf.reduce_mean(cross_entropy)
 
 '''
 # Construct model
@@ -194,18 +193,19 @@ if not os.path.exists(args.directory):
 	os.makedirs(args.directory)
 save_path = os.path.join(args.directory, "saved_model.ckpt")
 
-
 # Launch the graph
 saver = tf.train.Saver()
 with tf.Session() as sess:
 	if args.restore and os.path.exists(args.directory):
-		saver.restore(sess,save_path)
+		saver.restore(sess, save_path)
 		print()
 		print("model restored.")
 		print()
 	else:
 		sess.run(init)
 	# Training cycle
+	np.random.shuffle(Training_data)
+	np.random.shuffle(Test_data)
 	for iteration in range(training_iters):
 		idx = np.random.choice(num_train, size=batch_size, replace=False)
 		# Use the random index to select random images and labels.
@@ -215,7 +215,7 @@ with tf.Session() as sess:
 		_, batch_cost, train_acc = sess.run([optimizer, cost, accuracy],
 											feed_dict={x: batch_x, y: batch_y})
 		# Display logs per epoch step
-		print("\riter:{:5d}  accuracy:{:.6f}  cost:{:.6f}".format(iteration,train_acc,batch_cost),end="")
+		print("\riter:{:5d}  accuracy:{:.6f}  cost:{:.6f}".format(iteration, train_acc, batch_cost), end="")
 		"""
 		if iteration % 100 == 0:
 			print("Iteraion", '%04d,' % (iteration), \
@@ -226,21 +226,41 @@ with tf.Session() as sess:
 			saver.save(sess, save_path)
 			print("model saved.")
 		if iteration % 1000 == 0:
-			idx = np.random.choice(num_train, size=batch_size, replace=False)
+			idx = np.random.choice(num_test, size=batch_size, replace=False)
 			# Use the random index to select random images and labels.
-			test_batch_x = Training_data['train_patch'][idx, :]
-			test_batch_y = Training_data['train_labels'][idx, :]
+			test_batch_x = Test_data['test_patch'][idx, :]
+			test_batch_y = Test_data['test_labels'][idx, :]
 			print('Test Data Eval: Test Accuracy = %.4f' % sess.run(accuracy, \
 																	feed_dict={x: test_batch_x, y: test_batch_y}))
 	print("Optimization Finished!")
 
 with tf.Session() as sess:
-	saver.restore(sess,save_path)
-	arr=sess.run(tf.squeeze(y_prob),feed_dict={x:Training_data['train_patch'][0:10]})
+	print("=============train data==============")
+	
+	saver.restore(sess, save_path)
+	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Training_data['train_patch'][0:10]})
 	for item in arr:
 		for i in item:
-			print("%.5f"%i,end=" ")
+			print("%.5f" % i, end=" ")
 		print()
+	
+	print("=============test data===============")
+	
+	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Test_data['test_patch'][0:10]})
+	for item in arr:
+		for i in item:
+			print("%.5f" % i, end=" ")
+		print()
+	
+	print("=============all data================")
+	
+	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Test_data['test_patch'][0:10]})
+	for item in arr:
+		for i in item:
+			print("%.5f" % i, end=" ")
+		print()
+	
+	print("====================================")
 	
 	# Obtain the probabilistic map
 	All_data['patch'] = np.transpose(All_data['patch'], (0, 2, 3, 1))
@@ -255,7 +275,9 @@ with tf.Session() as sess:
 	prob_map = np.zeros((1, n_classes))
 	for i in range(times):
 		feed_x = np.reshape(np.asarray(All_data['patch'][start:start + Num_Each_File[i]]), (-1, n_input))
-		temp = sess.run(y_prob, feed_dict={x: feed_x})
+		temp = sess.run(tf.squeeze(y_prob), feed_dict={x: feed_x})
+		print("=====haha=====")
+		print(temp[0:5])
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 		start += Num_Each_File[i]
 	
@@ -263,7 +285,7 @@ with tf.Session() as sess:
 	
 	# MRF
 	# prob_map = compute_prob_map()
-	Seg_Label, seg_Label, seg_accuracy = Post_Processing(prob_map, Height, Width, n_classes, y_test_scalar, TestIndex)
+	# Seg_Label, seg_Label, seg_accuracy = Post_Processing(prob_map, Height, Width, n_classes, y_test_scalar, TestIndex)
 	
 	print('The shape of prob_map is (%d,%d)' % (prob_map.shape[0], prob_map.shape[1]))
 	DATA_PATH = os.getcwd()

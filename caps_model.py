@@ -4,8 +4,8 @@ from utils import squash, patch_size
 from tensorflow.contrib import slim
 import capslayer as cl
 
-num_band = 103  # paviaU 103
-num_classes = 9
+num_band = 220  # paviaU 103
+num_classes = 16
 
 def capnet(X):
 	X=tf.reshape(X,[-1,patch_size,patch_size,num_band])
