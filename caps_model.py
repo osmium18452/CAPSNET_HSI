@@ -2,10 +2,20 @@ import tensorflow as tf
 import numpy as np
 from utils import squash, patch_size
 from tensorflow.contrib import slim
+import capslayer as cl
 
 num_band = 103  # paviaU 103
 num_classes = 9
 
+def capnet(X):
+	X=tf.reshape(X,[-1,patch_size,patch_size,num_band])
+	conv_args={
+		"filters":64,
+		"kernel_size":4,
+		"strides":1,
+		"padding":"VALID",
+		"activation":tf.nn.relu
+	}
 
 def conv_net(x):
 	with slim.arg_scope([slim.conv2d, slim.fully_connected],
@@ -56,7 +66,6 @@ def CapsNetWithPooling(X):
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
 	caps1_maps = 32
-	caps1_caps = caps1_maps
 	caps1_dims = 8
 	conv2_params = {
 		"filters": caps1_maps * caps1_dims,
@@ -67,6 +76,7 @@ def CapsNetWithPooling(X):
 		"name": "conv2"
 	}
 	conv2 = tf.layers.conv2d(conv1, **conv2_params)
+	caps1_caps=np.prod(conv2.shape[1:4])
 	caps1_raw = tf.reshape(conv2, [-1, caps1_caps, caps1_dims], name="caps1_raw")
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
