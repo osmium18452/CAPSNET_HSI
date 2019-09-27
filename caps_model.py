@@ -75,7 +75,7 @@ def CapsNetWithPooling(X):
 		"name": "conv2"
 	}
 	conv2 = tf.layers.conv2d(conv1, **conv2_params)
-	caps1_caps=np.prod(conv2.shape[1:4])
+	caps1_caps=np.prod(tf.squeeze(conv2.shape[1:4]))
 	caps1_raw = tf.reshape(conv2, [-1, caps1_caps, caps1_dims], name="caps1_raw")
 	# Squash the capsules.
 	caps1_output = squash(caps1_raw, name="caps1_output")
