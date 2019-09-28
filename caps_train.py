@@ -8,7 +8,7 @@ This code is modified based on https://github.com/KGPML/Hyperspectral
 from __future__ import print_function
 import tensorflow as tf
 import HSI_Data_Preparation
-from HSI_Data_Preparation import num_train, Band, All_data, TrainIndex, TestIndex, Height, Width,num_test
+from HSI_Data_Preparation import num_train, Band, All_data, TrainIndex, TestIndex, Height, Width, num_test
 from utils import patch_size, Post_Processing, safe_norm, squash
 import numpy as np
 import os
@@ -20,7 +20,7 @@ import argparse
 import pickle
 
 parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
-parser.add_argument("-e", "--epochs", default=10, type=int,
+parser.add_argument("-e", "--epochs", default=60, type=int,
 					help="The number of epochs you want to train.")
 parser.add_argument("-g", "--gpu", default="0", type=str,
 					help="Which gpu(s) you want to use.")
@@ -28,7 +28,7 @@ parser.add_argument("-i", "--iteration", default=50000, type=int,
 					help="Iterations for training.")
 parser.add_argument("-d", "--directory", default="./saved_model",
 					help="The directory you want to save your model.")
-parser.add_argument("-b", "--batch", default=100, type=int,
+parser.add_argument("-b", "--batch", default=64, type=int,
 					help="Set batch size.")
 parser.add_argument("-m", "--model", default=4, type=int,
 					help="Use which model to train and predict.")
@@ -42,12 +42,13 @@ parser.add_argument("-a", "--ratio", default=0.1, type=float,
 					help="NOT supported currently.")
 parser.add_argument("-p", "--patch_size", default=9, type=int,
 					help="NOT supported currently.")
+parser.add_argument("-l", "--lr", default=0.0001, type=float,
+					help="learning rate")
 args = parser.parse_args()
 
 print(args)
 
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
-
 
 """def compute_prob_map():
 	# Obtain the probabilistic map
@@ -68,7 +69,6 @@ os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 	
 	prob_map = np.delete(prob_map, (0), axis=0)
 	return prob_map"""
-
 
 start_time = time.time()
 
@@ -92,7 +92,7 @@ Training_data['train_patch'] = np.reshape(Training_data['train_patch'], (-1, n_i
 Test_data['test_patch'] = np.reshape(Test_data['test_patch'], (-1, n_input))
 
 # Parameters
-learning_rate = 0.001
+learning_rate = args.lr
 training_iters = args.iteration
 batch_size = args.batch
 display_step = 500
@@ -204,9 +204,45 @@ with tf.Session() as sess:
 	else:
 		sess.run(init)
 	# Training cycle
-	np.random.shuffle(Training_data)
-	np.random.shuffle(Test_data)
-	for iteration in range(training_iters):
+	
+	# mix the training data.
+	permutation = np.random.permutation(Training_data["train_patch"].shape[0])
+	Training_data["train_patch"] = Training_data["train_patch"][permutation, :]
+	Training_data["train_labels"] = Training_data["train_labels"][permutation, :]
+	permutation = np.random.permutation(Test_data["test_patch"].shape[0])
+	Test_data["test_patch"] = Test_data["test_patch"][permutation, :]
+	Test_data["test_labels"] = Test_data["test_labels"][permutation, :]
+	
+	for epoch in range(args.epochs):
+		iters = num_train // batch_size
+		for iter in range(iters):
+			batch_x = Training_data['train_patch'][iter * batch_size:(iter + 1) * batch_size, :]
+			batch_y = Training_data['train_labels'][iter * batch_size:(iter + 1) * batch_size, :]
+			_, batch_cost, train_acc = sess.run([optimizer, cost, accuracy], feed_dict={x: batch_x, y: batch_y})
+			print(
+				"\repochs:{:3d}  batch:{:4d}/{:4d}  accuracy:{:.6f}  cost:{:.6f}".format(epoch, iter, iters, train_acc,
+																						 batch_cost), end="")
+		
+		if num_train % batch_size != 0:
+			batch_x = Training_data['train_patch'][iters * batch_size:, :]
+			batch_y = Training_data['train_labels'][iters * batch_size:, :]
+			_, batch_cost, train_acc = sess.run([optimizer, cost, accuracy], feed_dict={x: batch_x, y: batch_y})
+			print(
+				"\repochs:{:3d}  batch:{:4d}/{:4d}  accuracy:{:.6f}  cost:{:.6f}".format(epoch, iters, iters, train_acc,
+																						 batch_cost), end="")
+		saver.save(sess, save_path=save_path)
+		print("\nmodel saved")
+		
+		idx = np.random.choice(num_test, size=batch_size, replace=False)
+		# Use the random index to select random images and labels.
+		test_batch_x = Test_data['test_patch'][idx, :]
+		test_batch_y = Test_data['test_labels'][idx, :]
+		ac,cs=sess.run([accuracy, cost], feed_dict={x: test_batch_x, y: test_batch_y})
+		print('Test Data Eval: Test Accuracy = %.4f, Test Cost =%.4f' % (ac,cs))
+	
+	print("optimization finished!")
+	
+	"""for iteration in range(training_iters):
 		idx = np.random.choice(num_train, size=batch_size, replace=False)
 		# Use the random index to select random images and labels.
 		batch_x = Training_data['train_patch'][idx, :]
@@ -216,12 +252,12 @@ with tf.Session() as sess:
 											feed_dict={x: batch_x, y: batch_y})
 		# Display logs per epoch step
 		print("\riter:{:5d}  accuracy:{:.6f}  cost:{:.6f}".format(iteration, train_acc, batch_cost), end="")
-		"""
+		
 		if iteration % 100 == 0:
 			print("Iteraion", '%04d,' % (iteration), \
 				  "Batch cost=%.4f," % (batch_cost), \
 				  "Training Accuracy=%.4f" % (train_acc))
-		"""
+		
 		if iteration % 1000 == 999:
 			saver.save(sess, save_path)
 			print("model saved.")
@@ -233,6 +269,7 @@ with tf.Session() as sess:
 			print('Test Data Eval: Test Accuracy = %.4f' % sess.run(accuracy, \
 																	feed_dict={x: test_batch_x, y: test_batch_y}))
 	print("Optimization Finished!")
+"""
 
 with tf.Session() as sess:
 	print("=============train data==============")
@@ -276,8 +313,8 @@ with tf.Session() as sess:
 	for i in range(times):
 		feed_x = np.reshape(np.asarray(All_data['patch'][start:start + Num_Each_File[i]]), (-1, n_input))
 		temp = sess.run(tf.squeeze(y_prob), feed_dict={x: feed_x})
-		print("=====haha=====")
-		print(temp[0:5])
+		"""print("=====haha=====")
+		print(temp[0:5])"""
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 		start += Num_Each_File[i]
 	
@@ -288,7 +325,14 @@ with tf.Session() as sess:
 	# Seg_Label, seg_Label, seg_accuracy = Post_Processing(prob_map, Height, Width, n_classes, y_test_scalar, TestIndex)
 	
 	print('The shape of prob_map is (%d,%d)' % (prob_map.shape[0], prob_map.shape[1]))
-	DATA_PATH = os.getcwd()
+	arr_test=np.zeros((1,patch_size*patch_size*220))
+	print("__________------hahahaha------___________")
+	ar=sess.run(y_prob,feed_dict={x:arr_test})
+	for i in ar[0]:
+		print("%.6f"%i,end=" ")
+		print()
+	print("_________________________________________")
+	DATA_PATH = os.path.join(os.getcwd(), args.directory)
 	file_name = 'prob_map.mat'
 	prob = {}
 	prob['prob_map'] = prob_map
