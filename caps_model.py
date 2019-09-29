@@ -321,7 +321,7 @@ def caps_net(x):
 		num_outputs=num_classes,
 		out_caps_dims=[16,1],
 		# routing_method=routing_method,
-		coordinate_addition=True,
-		name="ClassCaps_layer"
+		# coordinate_addition=True,
+		# name="ClassCaps_layer"
 	)
 	return rt_probs
