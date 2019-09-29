@@ -15,22 +15,25 @@ import os
 import scipy.io
 # from cnn_model import conv_net
 import time
-from caps_model import CapsNet, CapsNetWithPooling
+import capslayer as cl
+from caps_model import caps_net
 import argparse
 import pickle
 
+
 def normalize(rt):
 	# print (rt.shape)
-	ans=np.zeros((1,rt.shape[1]))
+	ans = np.zeros((1, rt.shape[1]))
 	for item in rt:
-		sum=0.
+		sum = 0.
 		for i in item:
-			sum+=i
-		ans=np.concatenate((ans,np.reshape(item/sum,(1,-1))),axis=0)
+			sum += i
+		ans = np.concatenate((ans, np.reshape(item / sum, (1, -1))), axis=0)
 	# print(ans.shape)
 	rtn = np.delete(ans, (0), axis=0)
 	# print(rtn.shape)
 	return rtn
+
 
 parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
 parser.add_argument("-e", "--epochs", default=100, type=int,
@@ -93,7 +96,7 @@ x = tf.placeholder(shape=[None, n_input], dtype=tf.float32, name="X")
 y = tf.placeholder(shape=[None, n_classes], dtype=tf.int64, name="y")
 
 # construct model.
-if args.model == 1:
+"""if args.model == 1:
 	capsOutput = CapsNet(x)
 	print("model 1 loaded.")
 else:
@@ -142,18 +145,21 @@ cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=softmax
 if args.cost == "margin":
 	cost = margin_loss
 else:
-	cost = tf.reduce_mean(cross_entropy)
+	cost = tf.reduce_mean(cross_entropy)"""
 
-'''
-# Construct model
+
+"""# Construct model
 pred = conv_net(x)
 softmax_output = tf.nn.softmax(pred)
 
 # Define loss and optimizer
 cross_entropy = tf.nn.softmax_cross_entropy_with_logits(logits=pred, labels=y)
 cost = tf.reduce_mean(cross_entropy)
-'''
-
+"""
+pred=caps_net(x)
+T=tf.one_hot(y,depth=n_classes)
+margin_loss=cl.losses.margin_loss(T,pred)
+cost=tf.reduce_mean(margin_loss)
 optimizer = tf.train.AdamOptimizer(learning_rate=learning_rate).minimize(cost)
 
 # Define accuracy
@@ -224,7 +230,7 @@ with tf.Session() as sess:
 		ac, cs, pr, ory = sess.run([accuracy, cost, pred, y], feed_dict={x: test_batch_x, y: test_batch_y})
 		print('Test Data Eval: Test Accuracy = %.4f, Test Cost =%.4f' % (ac, cs))
 		
-		pr=normalize(pr)
+		pr = normalize(pr)
 		
 		for ii in pr[1]:
 			print("%.6f" % ii, end=" ")
@@ -242,7 +248,7 @@ with tf.Session() as sess:
 	arr, rst = sess.run([pred, y],
 						feed_dict={x: Training_data["train_patch"][0:20, :], y: Training_data["train_labels"][0:20, :]})
 	
-	arr=normalize(arr)
+	arr = normalize(arr)
 	
 	for i in range(20):
 		for item in arr[i]:
@@ -286,10 +292,10 @@ with tf.Session() as sess:
 	# MRF
 	DATA_PATH = os.path.join(os.getcwd(), args.directory)
 	
-	f=open(os.path.join(DATA_PATH,"101data.txt"),"w+")
+	f = open(os.path.join(DATA_PATH, "101data.txt"), "w+")
 	for items in prob_map:
 		for i in items:
-			print("%.6f"%i,file=f,end=" ")
+			print("%.6f" % i, file=f, end=" ")
 		print(file=f)
 	f.close()
 	
