@@ -227,9 +227,9 @@ with tf.Session() as sess:
 			batch_x = Training_data['train_patch'][iters * batch_size:, :]
 			batch_y = Training_data['train_labels'][iters * batch_size:, :]
 			_, batch_cost, train_acc = sess.run([optimizer, cost, accuracy], feed_dict={x: batch_x, y: batch_y})
-			print(
-				"\repochs:{:3d}  batch:{:4d}/{:4d}  accuracy:{:.6f}  cost:{:.6f}".format(epoch, iters, iters, train_acc,
-																						 batch_cost), end="")
+			# print(
+			# 	"\repochs:{:3d}  batch:{:4d}/{:4d}  accuracy:{:.6f}  cost:{:.6f}".format(epoch, iters, iters, train_acc,
+			# 																			 batch_cost), end="")
 		saver.save(sess, save_path=save_path)
 		print("\nmodel saved")
 		
@@ -327,8 +327,8 @@ with tf.Session() as sess:
 	print('The shape of prob_map is (%d,%d)' % (prob_map.shape[0], prob_map.shape[1]))
 	arr_test=np.zeros((1,patch_size*patch_size*220))
 	print("__________------hahahaha------___________")
-	ar=sess.run(y_prob,feed_dict={x:arr_test})
-	for i in ar[0]:
+	ar=sess.run(tf.squeeze(y_prob),feed_dict={x:arr_test})
+	for i in ar:
 		print("%.6f"%i,end=" ")
 		print()
 	print("_________________________________________")
