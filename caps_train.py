@@ -242,67 +242,50 @@ with tf.Session() as sess:
 	
 	print("optimization finished!")
 	
-	"""for iteration in range(training_iters):
-		idx = np.random.choice(num_train, size=batch_size, replace=False)
-		# Use the random index to select random images and labels.
-		batch_x = Training_data['train_patch'][idx, :]
-		batch_y = Training_data['train_labels'][idx, :]
-		# Run optimization op (backprop) and cost op (to get loss value)
-		_, batch_cost, train_acc = sess.run([optimizer, cost, accuracy],
-											feed_dict={x: batch_x, y: batch_y})
-		# Display logs per epoch step
-		print("\riter:{:5d}  accuracy:{:.6f}  cost:{:.6f}".format(iteration, train_acc, batch_cost), end="")
-		
-		if iteration % 100 == 0:
-			print("Iteraion", '%04d,' % (iteration), \
-				  "Batch cost=%.4f," % (batch_cost), \
-				  "Training Accuracy=%.4f" % (train_acc))
-		
-		if iteration % 1000 == 999:
-			saver.save(sess, save_path)
-			print("model saved.")
-		if iteration % 1000 == 0:
-			idx = np.random.choice(num_test, size=batch_size, replace=False)
-			# Use the random index to select random images and labels.
-			test_batch_x = Test_data['test_patch'][idx, :]
-			test_batch_y = Test_data['test_labels'][idx, :]
-			print('Test Data Eval: Test Accuracy = %.4f' % sess.run(accuracy, \
-																	feed_dict={x: test_batch_x, y: test_batch_y}))
-	print("Optimization Finished!")
-"""
 
 with tf.Session() as sess:
-	print("=============train data==============")
+	
+	"""f=open(os.path.join(os.getcwd(), args.directory,"104data.txt"),"w+")
+	print(file=f)
+	print("=============train data==============",file=f)
+	print(file=f)
 	
 	saver.restore(sess, save_path)
-	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Training_data['train_patch'][0:10]})
+	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Training_data['train_patch']})
 	for item in arr:
 		for i in item:
-			print("%.5f" % i, end=" ")
-		print()
+			print("%.5f" % i, end=" ",file=f)
+		print(file=f)
 	
-	print("=============test data===============")
+	print(file=f)
+	print("=============test data===============",file=f)
+	print(file=f)
 	
-	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Test_data['test_patch'][0:10]})
+	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Test_data['test_patch']})
 	for item in arr:
 		for i in item:
-			print("%.5f" % i, end=" ")
-		print()
+			print("%.5f" % i, end=" ",file=f)
+		print(file=f)
 	
-	print("=============all data================")
+	print(file=f)
+	print("=============all data================",file=f)
+	print(file=f)
 	
-	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: Test_data['test_patch'][0:10]})
+	All_data['patch'] = np.transpose(All_data['patch'], (0, 2, 3, 1))
+	
+	arr = sess.run(tf.squeeze(y_prob), feed_dict={x: np.reshape(All_data["patch"][5000:5100],(-1,n_input))})
 	for item in arr:
 		for i in item:
-			print("%.5f" % i, end=" ")
-		print()
+			print("%.5f" % i, end=" ",file=f)
+		print(file=f)
 	
-	print("====================================")
+	print(file=f)
+	print("====================================",file=f)
+	print(file=f)"""
 	
 	# Obtain the probabilistic map
-	All_data['patch'] = np.transpose(All_data['patch'], (0, 2, 3, 1))
 	num_all = len(All_data['patch'])
-	times = 20
+	times = 400
 	num_each_time = int(num_all / times)
 	res_num = num_all - times * num_each_time
 	Num_Each_File = num_each_time * np.ones((1, times), dtype=int)
