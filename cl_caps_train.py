@@ -117,9 +117,9 @@ with tf.Session() as sess:
 	else:
 		sess.run(init)
 	# Training cycle
-
+	
 	for epoch in range(args.epochs):
-
+		
 		# mix the training data.
 		if epoch % 5 == 0:
 			permutation = np.random.permutation(Training_data["train_patch"].shape[0])
@@ -129,7 +129,7 @@ with tf.Session() as sess:
 			Test_data["test_patch"] = Test_data["test_patch"][permutation, :]
 			Test_data["test_labels"] = Test_data["test_labels"][permutation, :]
 			print("randomized")
-
+		
 		iters = num_train // batch_size
 		for iter in range(iters):
 			batch_x = Training_data['train_patch'][iter * batch_size:(iter + 1) * batch_size, :]
@@ -139,7 +139,7 @@ with tf.Session() as sess:
 				"\repochs:{:3d}  batch:{:4d}/{:4d}  accuracy:{:.6f}  cost:{:.6f}".format(epoch + 1, iter + 1, iters,
 																						 train_acc,
 																						 batch_cost), end="")
-
+		
 		if num_train % batch_size != 0:
 			batch_x = Training_data['train_patch'][iters * batch_size:, :]
 			batch_y = Training_data['train_labels'][iters * batch_size:, :]
@@ -149,34 +149,34 @@ with tf.Session() as sess:
 		# 																			 batch_cost), end="")
 		saver.save(sess, save_path=save_path)
 		print("\nmodel saved")
-
+		
 		idx = np.random.choice(num_test, size=batch_size, replace=False)
 		# Use the random index to select random images and labels.
 		test_batch_x = Test_data['test_patch'][idx, :]
 		test_batch_y = Test_data['test_labels'][idx, :]
 		ac, cs, pr, ory = sess.run([accuracy, cost, pred, y], feed_dict={x: test_batch_x, y: test_batch_y})
 		print('Test Data Eval: Test Accuracy = %.4f, Test Cost =%.4f' % (ac, cs))
-
+		
 		pr = normalize(pr)
-
+		
 		for ii in pr[1]:
 			print("%.6f" % ii, end=" ")
 		print()
 		for ii in ory[1]:
 			print("%8d" % ii, end=" ")
 		print()
-
+	
 	print("optimization finished!")
 
 with tf.Session() as sess:
 	saver.restore(sess, save_path)
-
+	
 	print("==========training data===========")
 	arr, rst = sess.run([pred, y],
 						feed_dict={x: Training_data["train_patch"][0:20, :], y: Training_data["train_labels"][0:20, :]})
-
+	
 	arr = normalize(arr)
-
+	
 	for i in range(20):
 		for item in arr[i]:
 			print("%.6f" % item, end=" ")
@@ -185,7 +185,7 @@ with tf.Session() as sess:
 			print("%8d" % item, end=" ")
 		print()
 	print()
-
+	
 	print("==========test data===========")
 	arr, rst = sess.run([pred, y],
 						feed_dict={x: Test_data["test_patch"][0:20, :], y: Test_data["test_labels"][0:20, :]})
@@ -197,22 +197,26 @@ with tf.Session() as sess:
 			print("%8d" % item, end=" ")
 		print()
 	print()
-
+	
 	# Obtain the probabilistic map
 	num_all = len(All_data["patch"])
 	pred_times = num_all // args.predict_batch
 	prob_map = np.zeros((1, n_classes))
 	for i in range(pred_times):
-		temp = sess.run(pred, feed_dict={x: All_data["patch"][i * args.predict_batch:(i + 1) * args.predict_batch]})
+		feedx = np.reshape(np.asarray(All_data["patch"][i * args.predict_batch:(i + 1) * args.predict_batch]),
+						   (-1, n_input))
+		temp = sess.run(pred, feed_dict={x: feedx})
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 		for itm in temp[0]:
-			print("%.6lf"%itm,end=" ")
+			print("%.6lf" % itm, end=" ")
 		print()
 		print(All_data["labels"][i * args.predict_batch])
 	if num_all % args.predict_batch != 0:
-		temp = sess.run(pred, feed_dict={x: All_data["patch"][pred_times * args.predict_batch:]})
+		feedx = np.reshape(np.asarray(All_data["patch"][pred_times * args.predict_batch:]), (-1, n_input))
+		feedx = np.asarray(All_data["patch"][pred_times * args.predict_batch:], (-1, n_input))
+		temp = sess.run(pred, feed_dict={x: feedx})
 		prob_map = np.concatenate((prob_map, temp), axis=0)
-
+	
 	"""
 	num_all = len(All_data['patch'])
 	times = args.predict_times
@@ -229,41 +233,41 @@ with tf.Session() as sess:
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 		start += Num_Each_File[i]
 	"""
-
+	
 	prob_map = np.delete(prob_map, (0), axis=0)
-
+	
 	# MRF
 	DATA_PATH = os.path.join(os.getcwd(), args.directory)
-
+	
 	f = open(os.path.join(DATA_PATH, "101data.txt"), "w+")
 	for items in prob_map:
 		for i in items:
 			print("%.6f" % i, file=f, end=" ")
 		print(file=f)
 	f.close()
-
+	
 	print('The shape of prob_map is (%d,%d)' % (prob_map.shape[0], prob_map.shape[1]))
 	arr_test = np.zeros((1, patch_size * patch_size * 220))
 	file_name = 'prob_map.mat'
 	prob = {}
 	prob['prob_map'] = prob_map
 	scipy.io.savemat(os.path.join(DATA_PATH, file_name), prob)
-
+	
 	train_ind = {}
 	train_ind['TrainIndex'] = TrainIndex
 	scipy.io.savemat(os.path.join(DATA_PATH, 'TrainIndex.mat'), train_ind)
-
+	
 	test_ind = {}
 	test_ind['TestIndex'] = TestIndex
 	scipy.io.savemat(os.path.join(DATA_PATH, 'TestIndex.mat'), test_ind)
-
+	
 	end_time = time.time()
 	print('The elapsed time is %.2f' % (end_time - start_time))
-
+	
 	f = open(os.path.join(DATA_PATH, "./105label.txt"), "w+")
 	for items in All_data["labels"]:
 		print(items, file=f)
 	f.close()
-
+	
 	Seg_Label, seg_Label, seg_accuracy = Post_Processing(prob_map, Height, Width, n_classes, y_test_scalar, TestIndex)
 	print("The Final Seg Accuracy is :", seg_accuracy)
