@@ -46,6 +46,8 @@ parser.add_argument("-t", "--predict_times", default=400, type=int,
 					help="times you want to predict. smaller times causes bigger batches.")
 parser.add_argument("-o", "--optimizer", default="adam", type=str,
 					help="use adam optimizer or sgd optmizer")
+parser.add_argument("-p", "--predict_batch", default=100, type=int,
+					help="predict batch size")
 args = parser.parse_args()
 
 print(args)
@@ -197,6 +199,21 @@ with tf.Session() as sess:
 	print()
 
 	# Obtain the probabilistic map
+	num_all = len(All_data["patch"])
+	pred_times = num_all // args.predict_batch
+	prob_map = np.zeros((1, n_classes))
+	for i in range(pred_times):
+		temp = sess.run(pred, feed_dict={x: All_data["patch"][i * args.predict_batch:(i + 1) * args.predict_batch]})
+		prob_map = np.concatenate((prob_map, temp), axis=0)
+		for itm in temp[0]:
+			print("%.6lf"%itm,end=" ")
+		print()
+		print(All_data["labels"][i * args.predict_batch])
+	if num_all % args.predict_batch != 0:
+		temp = sess.run(pred, feed_dict={x: All_data["patch"][pred_times * args.predict_batch:]})
+		prob_map = np.concatenate((prob_map, temp), axis=0)
+
+	"""
 	num_all = len(All_data['patch'])
 	times = args.predict_times
 	num_each_time = int(num_all / times)
@@ -211,6 +228,7 @@ with tf.Session() as sess:
 		temp = sess.run(pred, feed_dict={x: feed_x})
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 		start += Num_Each_File[i]
+	"""
 
 	prob_map = np.delete(prob_map, (0), axis=0)
 

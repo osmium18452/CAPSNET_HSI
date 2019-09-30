@@ -11,7 +11,7 @@ import scipy.io as io
 from pygco import cut_simple, cut_simple_vh
 from sklearn.metrics import accuracy_score
 
-patch_size = 7  # can be tuned
+patch_size = 9 # can be tuned
 
 
 class DataSet(object):
