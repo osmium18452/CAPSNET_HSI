@@ -349,7 +349,7 @@ def caps_net_mod(x):
 	conv2 = tf.layers.conv2d(
 		conv1,
 		filters=300,
-		kernel=3,
+		kernel_size=3,
 		padding="valid",
 		activation=tf.nn.relu
 	)
