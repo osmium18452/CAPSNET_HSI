@@ -1,10 +1,3 @@
-# -*- coding: utf-8 -*-
-"""
-Created on Sat Feb 18 16:21:13 2017
-@author: Xiangyong Cao
-This code is modified based on https://github.com/KGPML/Hyperspectral
-"""
-
 from __future__ import print_function
 import tensorflow as tf
 import HSI_Data_Preparation
@@ -13,23 +6,18 @@ from utils import patch_size, Post_Processing, safe_norm, squash
 import numpy as np
 import os
 import scipy.io
-# from cnn_model import conv_net
 import time
 from caps_model import CapsNet, CapsNetWithPooling
 import argparse
-import pickle
 
 def normalize(rt):
-	# print (rt.shape)
 	ans=np.zeros((1,rt.shape[1]))
 	for item in rt:
 		sum=0.
 		for i in item:
 			sum+=i
 		ans=np.concatenate((ans,np.reshape(item/sum,(1,-1))),axis=0)
-	# print(ans.shape)
 	rtn = np.delete(ans, (0), axis=0)
-	# print(rtn.shape)
 	return rtn
 
 parser = argparse.ArgumentParser(description="Capsule Network on MNIST")
@@ -51,6 +39,9 @@ parser.add_argument("-l", "--lr", default=0.0001, type=float,
 					help="learning rate")
 parser.add_argument("-t", "--predict_times", default=400, type=int,
 					help="times you want to predict. smaller times causes bigger batches.")
+parser.add_argument("-o","--optimizer",default="adam",type=str,
+					help="use adam optimizer or sgd optmizer")
+
 args = parser.parse_args()
 
 print(args)
@@ -58,14 +49,6 @@ print(args)
 os.environ["CUDA_VISIBLE_DEVICES"] = args.gpu
 
 start_time = time.time()
-
-# Import HSI data
-# import pickle
-#
-# pkfile = open("./saved_data/training.pkl", "rb")
-# Training_data = pickle.load(pkfile)
-# pkfile = open("./saved_data/test.pkl", "rb")
-# Test_data = pickle.load(pkfile)
 
 Training_data, Test_data = HSI_Data_Preparation.Prepare_data()
 # Training_data=pickle.load("./saved_data/training.pkl")
@@ -137,12 +120,10 @@ absent_error = tf.reshape(absent_error_raw, shape=(-1, n_classes), name="absent_
 L = tf.add(T * present_error, lambda_ * (1.0 - T) * absent_error, name="L")
 margin_loss = tf.reduce_mean(tf.reduce_sum(L, axis=1), name="margin_loss")
 
-cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=softmax_output)
+# cross_entropy = tf.nn.softmax_cross_entropy_with_logits(labels=y, logits=softmax_output)
 
-if args.cost == "margin":
-	cost = margin_loss
-else:
-	cost = tf.reduce_mean(cross_entropy)
+
+cost = tf.reduce_mean(margin_loss)
 
 '''
 # Construct model
@@ -224,7 +205,7 @@ with tf.Session() as sess:
 		ac, cs, pr, ory = sess.run([accuracy, cost, pred, y], feed_dict={x: test_batch_x, y: test_batch_y})
 		print('Test Data Eval: Test Accuracy = %.4f, Test Cost =%.4f' % (ac, cs))
 		
-		pr=normalize(pr)
+		# pr=normalize(pr)
 		
 		for ii in pr[1]:
 			print("%.6f" % ii, end=" ")
@@ -235,14 +216,12 @@ with tf.Session() as sess:
 	
 	print("optimization finished!")
 
-with tf.Session() as sess:
-	saver.restore(sess, save_path)
 	
 	print("==========training data===========")
 	arr, rst = sess.run([pred, y],
 						feed_dict={x: Training_data["train_patch"][0:20, :], y: Training_data["train_labels"][0:20, :]})
 	
-	arr=normalize(arr)
+	# arr=normalize(arr)
 	
 	for i in range(20):
 		for item in arr[i]:
