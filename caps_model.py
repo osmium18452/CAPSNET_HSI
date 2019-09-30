@@ -28,7 +28,7 @@ def CapsNetWithPooling(X):
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
 	caps1_maps = 32
-	caps1_caps=caps1_maps
+	caps1_caps = caps1_maps
 	caps1_dims = 8
 	conv2_params = {
 		"filters": caps1_maps * caps1_dims,
@@ -200,6 +200,7 @@ def CapsNet(X):
 
 	return caps2_output_3
 
+
 def CapsNetWithPoolingAndBN(X):
 	print(X.shape[0])
 	X = tf.reshape(X, [-1, patch_size, patch_size, num_band])
@@ -220,7 +221,7 @@ def CapsNetWithPoolingAndBN(X):
 	# We extract 32 features and each feature will be casted to 6*6 capsules, whose dimension is [8].
 	# FIXME: The caps1_caps scalar should be modified to fit into different size of data sets.
 	caps1_maps = 32
-	caps1_caps=caps1_maps
+	caps1_caps = caps1_maps
 	caps1_dims = 8
 	conv2_params = {
 		"filters": caps1_maps * caps1_dims,
@@ -296,6 +297,7 @@ def CapsNetWithPoolingAndBN(X):
 
 	return caps2_output_3
 
+
 def caps_net(x):
 	net = tf.reshape(x, [-1, patch_size, patch_size, num_band])
 	conv1 = tf.layers.conv2d(
@@ -307,21 +309,70 @@ def caps_net(x):
 		activation=tf.nn.relu,
 		name="convLayer"
 	)
+
 	convCaps, activation = cl.layers.primaryCaps(
 		conv1,
 		filters=32,
 		kernel_size=3,
 		strides=1,
-		out_caps_dims=[8,1],
+		out_caps_dims=[8, 1],
 		method="logistic"
 	)
+
+	n_input = np.prod(cl.shape(convCaps)[1:4])
+	convCaps = tf.reshape(convCaps, shape=[-1, n_input, 8, 1])
+	activation = tf.reshape(activation, shape=[-1, n_input])
+
 	rt_poses, rt_probs = cl.layers.dense(
 		convCaps,
 		activation,
 		num_outputs=num_classes,
-		out_caps_dims=[16,1],
-		# routing_method=routing_method,
-		coordinate_addition=True,
-		# name="ClassCaps_layer"
+		out_caps_dims=[16, 1],
+		routing_method="DynamicRouting"
+	)
+	return rt_probs
+
+
+def caps_net_mod(x):
+	net = tf.reshape(x, [-1, patch_size, patch_size, num_band])
+	conv1 = tf.layers.conv2d(
+		net,
+		filters=100,
+		kernel_size=5,
+		strides=1,
+		padding="VALID",
+		activation=tf.nn.relu,
+		name="convLayer"
+	)
+	conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
+
+	conv2 = tf.layers.conv2d(
+		conv1,
+		filters=300,
+		kernel_size=3,
+		padding="valid",
+		activation=tf.nn.relu
+	)
+	conv2 = tf.nn.max_pool2d(conv2, 2, strides=2, padding="same")
+
+	convCaps, activation = cl.layers.primaryCaps(
+		conv2,
+		filters=32,
+		kernel_size=3,
+		strides=1,
+		out_caps_dims=[8, 1],
+		method="logistic"
+	)
+
+	n_input = np.prod(cl.shape(convCaps)[1:4])
+	convCaps = tf.reshape(convCaps, shape=[-1, n_input, 8, 1])
+	activation = tf.reshape(activation, shape=[-1, n_input])
+
+	rt_poses, rt_probs = cl.layers.dense(
+		convCaps,
+		activation,
+		num_outputs=num_classes,
+		out_caps_dims=[16, 1],
+		routing_method="DynamicRouting"
 	)
 	return rt_probs
