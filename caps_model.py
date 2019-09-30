@@ -338,26 +338,26 @@ def caps_net_mod(x):
 	conv1 = tf.layers.conv2d(
 		net,
 		filters=100,
-		kernel_size=5,
+		kernel_size=3,
 		strides=1,
-		padding="VALID",
+		padding="same",
 		activation=tf.nn.relu,
 		name="convLayer"
 	)
 	conv1 = tf.layers.max_pooling2d(conv1, 2, strides=2, padding="same")
 
-	conv2 = tf.layers.conv2d(
+	"""conv2 = tf.layers.conv2d(
 		conv1,
 		filters=300,
 		kernel_size=3,
-		padding="valid",
+		padding="same",
 		activation=tf.nn.relu
 	)
-	conv2 = tf.nn.max_pool2d(conv2, 2, strides=2, padding="same")
+	conv2 = tf.layers.max_pooling2d(conv2, 2, strides=2, padding="same")"""
 
 	convCaps, activation = cl.layers.primaryCaps(
-		conv2,
-		filters=32,
+		conv1,
+		filters=64,
 		kernel_size=3,
 		strides=1,
 		out_caps_dims=[8, 1],
