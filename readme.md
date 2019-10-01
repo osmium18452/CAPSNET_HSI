@@ -1,6 +1,6 @@
 # Summary of the code for processing HSI data with capsule network
 
-The code failed to classify the HSI patches because it didn't converge.
+The code converges well but has some problem when computing the probabilistic map.
 
 ## What does each file do
 

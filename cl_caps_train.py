@@ -187,6 +187,7 @@ with tf.Session() as sess:
 	print()
 	
 	print("==========test data===========")
+	# print(Test_data["test_patch"])
 	arr, rst = sess.run([pred, y],
 						feed_dict={x: Test_data["test_patch"][0:20, :], y: Test_data["test_labels"][0:20, :]})
 	for i in range(20):
@@ -205,15 +206,18 @@ with tf.Session() as sess:
 	for i in range(pred_times):
 		feedx = np.reshape(np.asarray(All_data["patch"][i * args.predict_batch:(i + 1) * args.predict_batch]),
 						   (-1, n_input))
+		# print(feedx[1])
 		temp = sess.run(pred, feed_dict={x: feedx})
-		prob_map = np.concatenate((prob_map, temp), axis=0)
-		for itm in temp[0]:
+		
+		"""for itm in temp[0]:
 			print("%.6lf" % itm, end=" ")
 		print()
-		print(All_data["labels"][i * args.predict_batch])
+		print(All_data["labels"][i * args.predict_batch])"""
+		
+		prob_map = np.concatenate((prob_map, temp), axis=0)
 	if num_all % args.predict_batch != 0:
 		feedx = np.reshape(np.asarray(All_data["patch"][pred_times * args.predict_batch:]), (-1, n_input))
-		feedx = np.asarray(All_data["patch"][pred_times * args.predict_batch:], (-1, n_input))
+		# feedx = np.asarray(All_data["patch"][pred_times * args.predict_batch:], (-1, n_input))
 		temp = sess.run(pred, feed_dict={x: feedx})
 		prob_map = np.concatenate((prob_map, temp), axis=0)
 	
